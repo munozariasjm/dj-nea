@@ -1,40 +1,70 @@
+# voice_interaction.py
+
 import openai
-from config import OPENAI_KEY
- 
-openai.api_key = OPENAI_KEY
-
-def transcribe_audio(file_path):
-    # Open the audio file in binary mode
-    with open(file_path, 'rb') as audio_file:
-        # Use the Whisper API to transcribe the audio
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    return transcript['text']
-
-def analyze_mood(text):
-    # Use OpenAI's language model to analyze the mood
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are an assistant that identifies the speaker's mood in one word."},
-            {"role": "user", "content": f"Analyze the following text and provide a one-word description of the speaker's mood:\n\n{text}\n\nMood:"}
-        ],
-        max_tokens=1,
-        temperature=0.0,
-    )
-    mood = response['choices'][0]['message']['content'].strip()
-    return mood
-
-def get_text_instruction_and_mood(audio_file_path):
-    # Transcribe the audio to text
-    text = transcribe_audio(audio_file_path)
-    print("Transcribed Text:\n", text)
-    
-    # Analyze the mood of the text
-    mood = analyze_mood(text)
-    print("Detected Mood:", mood)
-    return text, mood
+import pyttsx3
+import tempfile
+import os
+import threading
 
 
+def speak_text(text):
+    """
+    Converts text to speech and plays it aloud.
 
-if __name__ == "__main__":
-    main()
+    Args:
+        text (str): The text to be spoken.
+    """
+    engine = pyttsx3.init()
+    # Optionally, set properties like voice, rate, and volume
+    engine.setProperty("rate", 150)  # Adjust the speech rate
+    engine.setProperty("volume", 1.0)  # Set volume between 0 and 1
+
+    # Run the text-to-speech conversion in a separate thread to prevent blocking
+    def run_speech():
+        engine.say(text)
+        engine.runAndWait()
+
+    threading.Thread(target=run_speech).start()
+
+
+def listen_user(openai_api_key):
+    """
+    Records audio from the user's microphone and transcribes it using OpenAI's Whisper API.
+
+    Args:
+        openai_api_key (str): The OpenAI API key for authentication.
+
+    Returns:
+        str: The transcribed text from the user's speech.
+    """
+    import sounddevice as sd
+    from scipy.io.wavfile import write
+
+    fs = 16000  # Sample rate
+    duration = 5  # Duration of recording in seconds
+
+    print("🎤 Listening... Please speak now.")
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype="int16")
+    sd.wait()  # Wait until recording is finished
+    print("Finished recording. Transcribing...")
+
+    # Save the recording to a temporary WAV file
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+        write(temp_audio_file.name, fs, recording)
+        temp_audio_file_path = temp_audio_file.name
+
+    # Transcribe the audio file using OpenAI's Whisper API
+    try:
+        with open(temp_audio_file_path, "rb") as audio_file:
+            response = openai.Audio.transcribe(
+                "whisper-1", audio_file, api_key=openai_api_key
+            )
+        transcribed_text = response["text"].strip()
+    except Exception as e:
+        print(f"An error occurred during transcription: {e}")
+        transcribed_text = ""
+    finally:
+        # Clean up the temporary audio file
+        os.remove(temp_audio_file_path)
+
+    return transcribed_text

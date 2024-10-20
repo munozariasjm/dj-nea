@@ -2,8 +2,10 @@ import threading
 import time
 import keyboard
 from chatgpt_handler import NextSongsSuggester
-from spotify_api import authenticate_spotify, play_spotify_song  # Assumed function for playing a song
+from spotify_api import SpotifyPlayer  # Assumed function for playing a song
 from voice_interaction import speak_text
+from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+
 
 # Global flag for controlling the interaction loop
 is_listening = False
@@ -16,13 +18,24 @@ def user_interaction_thread(suggester, spotify, config):
     previous_songs = []
     current_song = None
 
+    # Initialize the SpotifyPlayer
+    player = SpotifyPlayer(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+
+    # Get available devices and select one
+    devices = player.get_devices()
+    if devices:
+        device_id = devices[0]['id']  # Select the first available device
+    else:
+        print("No devices available.")
+        exit()
+
     suggester.collect_user_info()
 
     recommendations = suggester.pipeline(prev_songs=previous_songs)
     if recommendations:
         current_song = recommendations[0]  # Get the first recommended song
         speak_text(f"Playing {current_song}")
-        play_spotify_song(spotify, current_song)  # Play the first song
+        player.play_song(current_song, device_id)  # Play the first song
 
     while True:
         if keyboard.read_key() == "space":
@@ -67,10 +80,6 @@ def start_dj(config):
     suggester = NextSongsSuggester(
         n_recommendations=5,
         past_played_songs_num=10
-    )
-    spotify = authenticate_spotify(
-        config['spotify_client_id'],
-        config['spotify_client_secret']
     )
 
     interaction_thread = threading.Thread(

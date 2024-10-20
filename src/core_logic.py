@@ -5,10 +5,22 @@ import select
 from chatgpt_handler import NextSongsSuggester
 from spotify_api import SpotifyPlayer  # Assumed function for playing a song
 from voice_interaction import speak_text
-from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+import os
+from dotenv import load_dotenv
+
+# path to this folder
+path = os.path.dirname(os.path.abspath(__file__))
+print(path)
+path2secrets = os.path.join(path, "../secrets/.env")
+print(load_dotenv(path2secrets))
+
+
+REDIRECT_URI = "http://localhost:8888/callback"
 
 # Global flag for controlling the interaction loop
 is_listening = False
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 
 def timed_input(prompt, timeout=10):
@@ -46,16 +58,16 @@ def user_interaction_thread(suggester):
 
     # Get initial song recommendations
     recommendations = suggester.pipeline(prev_songs=previous_songs)
-    print(recommendations)
     if recommendations:
         current_song = recommendations[0]
         speak_text(f"Playing {current_song}")
-        song_artist = current_song.split(" - ")
+        song_artist = [current_song.split(" - ")]
         player.play_song(song_artist, device_id)  # Play the first song
 
+    print("🎧 Your AI DJ is ready and waiting for your commands...")
     while True:
         # Check for user input with a 10-second timeout
-        user_input = timed_input("\n🎤 Speak now or type your request", timeout=0.5)
+        user_input = timed_input("", timeout=1.0)
         if user_input:
             is_listening = True
 
@@ -77,7 +89,7 @@ def user_interaction_thread(suggester):
 
                 # Announce and play the new song
                 speak_text(f"Playing {current_song}")
-                song_artist = current_song.split(" - ")
+                song_artist = [current_song.split(" - ")]
                 player.play_song(song_artist, device_id)
 
             is_listening = False

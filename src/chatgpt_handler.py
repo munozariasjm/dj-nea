@@ -1,5 +1,3 @@
-# chatgpt_handler.py
-
 from typing import Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langchain.schema import SystemMessage
@@ -137,6 +135,7 @@ class NextSongsSuggester:
             "'Song Title - Artist, Song Title - Artist, ...'"
         )
         context += "\n- Ensure that the recommendations match the user's mood, activity, and music taste."
+        context += "\n- If there is no specific input/information, you can provide general recommendations (and) you think the user will enjoy based on his description."
         context += "\n- Do not include any songs that the user has already listened to in this playlist."
         context += "\n- Make sure that the songs exist and are spelled correctly."
 

@@ -14,8 +14,9 @@ class SpotifyPlayer:
             )
         )
 
-    def play_song(self, song_artist_list, device_id=None):
+    def play_song(self, song_artist_list: list, device_id=None):
         """Start playing a song given its Spotify URI."""
+        print(type(song_artist_list))
         track_uris = self.get_track_uris(song_artist_list)
         self.sp.start_playback(device_id=device_id, uris=track_uris)
 

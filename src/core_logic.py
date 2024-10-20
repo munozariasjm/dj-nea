@@ -42,7 +42,7 @@ else:
 # Load environment variables
 path = os.path.dirname(os.path.abspath(__file__))
 path2secrets = os.path.join(path, "../secrets/.env")
-path2user_settings = os.path.join(path, "settings/user_settings.txt")
+path2user_settings = os.path.join(path, "../settings/user_settings.txt")
 load_dotenv(path2secrets)
 
 
@@ -122,7 +122,7 @@ def user_interaction_thread(suggester):
     # Provide a personalized greeting
     if suggester.user_description:
         speak_text(
-            f"Hey there! Based on your music taste, I see you enjoy {suggester.user_description}. Let's get started!"
+            f"Hey there! Based on your music taste from spotify, I see what you enjoy. Let's get started!"
         )
     else:
         speak_text("Hey there! I'm excited to build a playlist just for you!")
@@ -142,15 +142,17 @@ def user_interaction_thread(suggester):
 
                 # Announce and play the new song
                 speak_text(f"Got it! Now playing {current_song}. Hope you enjoy it!")
-                song_artist = current_song.split(" - ")
-                player.play_song(song_artist, device_id)
+                song_artist = (
+                    current_song.replace('"', "").replace("'", "").split(" - ")
+                )
+                print(song_artist)
+                player.play_song([song_artist], device_id)
                 break
             except Exception as e:
-                print(f"An error occurred while finding the song: {recommendation}")
-                speak_text(
-                    f"Sorry, I couldn't find the song {recommendation}. Let's try another."
+                print(
+                    f"An error occurred while finding the song: {recommendation}, {e}"
                 )
-
+                speak_text(f"Sorry, I couldn't find the song. Let's try another.")
     print("🎧 Your AI DJ is ready and waiting for your commands...")
 
     while True:
@@ -195,7 +197,7 @@ def user_interaction_thread(suggester):
                             f"Got it! Now playing {current_song}. Hope you enjoy it!"
                         )
                         song_artist = current_song.split(" - ")
-                        player.play_song(song_artist, device_id)
+                        player.play_song([song_artist], device_id)
                         break
                     except Exception as e:
                         print(

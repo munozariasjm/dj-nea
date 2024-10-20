@@ -8,6 +8,13 @@ from gtts import gTTS
 import os
 import tempfile
 import playsound
+from dotenv import load_dotenv
+
+# Load environment variables
+path = os.path.dirname(os.path.abspath(__file__))
+path2secrets = os.path.join(path, "../secrets/.env")
+load_dotenv(path2secrets)
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
 def speak_text(text):
@@ -23,7 +30,7 @@ def speak_text(text):
         print(f"Error using gTTS: {e}")
 
 
-def listen_user(openai_api_key):
+def listen_user(audio_file_path):
     """
     Records audio from the user's microphone and transcribes it using OpenAI's Whisper API.
 
@@ -33,25 +40,25 @@ def listen_user(openai_api_key):
     Returns:
         str: The transcribed text from the user's speech.
     """
-    import sounddevice as sd
-    from scipy.io.wavfile import write
+    # import sounddevice as sd
+    # from scipy.io.wavfile import write
 
-    fs = 16000  # Sample rate
-    duration = 5  # Duration of recording in seconds
+    # fs = 16000  # Sample rate
+    # duration = 5  # Duration of recording in seconds
 
-    print("🎤 Listening... Please speak now.")
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype="int16")
-    sd.wait()  # Wait until recording is finished
-    print("Finished recording. Transcribing...")
+    # print("🎤 Listening... Please speak now.")
+    # recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype="int16")
+    # sd.wait()  # Wait until recording is finished
+    # print("Finished recording. Transcribing...")
 
-    # Save the recording to a temporary WAV file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-        write(temp_audio_file.name, fs, recording)
-        temp_audio_file_path = temp_audio_file.name
+    # # Save the recording to a temporary WAV file
+    # with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+    #     write(temp_audio_file.name, fs, recording)
+    #     temp_audio_file_path = temp_audio_file.name
 
     # Transcribe the audio file using OpenAI's Whisper API
     try:
-        with open(temp_audio_file_path, "rb") as audio_file:
+        with open(audio_file_path, "rb") as audio_file:
             response = openai.Audio.transcribe(
                 "whisper-1", audio_file, api_key=openai_api_key
             )
@@ -61,6 +68,6 @@ def listen_user(openai_api_key):
         transcribed_text = ""
     finally:
         # Clean up the temporary audio file
-        os.remove(temp_audio_file_path)
+        os.remove(audio_file_path)
 
     return transcribed_text

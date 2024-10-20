@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/jose/anaconda3/envs/envEduardo/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/Users/jose/anaconda3/envs/envEduardo/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/Users/jose/Documents/Personal/SideKicks/HACKATON_MIT/dj-nea/src/core_logic.py", line 37, in start_recording
+    with sd.InputStream(
+         ^^^^^^^^^^^^^^^
+  File "/Users/jose/anaconda3/envs/envEduardo/lib/python3.11/site-packages/sounddevice.py", line 1440, in __init__
+    _StreamBase.__init__(self, kind='input', wrap_callback='array',
+  File "/Users/jose/anaconda3/envs/envEduardo/lib/python3.11/site-packages/sounddevice.py", line 909, in __init__
+    _check(_lib.Pa_OpenStream(self._ptr, iparameters, oparameters,
+  File "/Users/jose/anaconda3/envs/envEduardo/lib/python3.11/site-packages/sounddevice.py", line 2796, in _check
+    raise PortAudioError(errormsg, err)
+sounddevice.PortAudioError: Error opening InputStream: Invalid number of channels [PaErrorCode -9998]

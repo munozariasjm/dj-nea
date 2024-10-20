@@ -1,12 +1,8 @@
 import openai
-import pyttsx3
-import tempfile
+from openai import OpenAI
 import os
-import threading
-
+import tempfile
 from gtts import gTTS
-import os
-import tempfile
 import playsound
 from dotenv import load_dotenv
 
@@ -15,6 +11,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 path2secrets = os.path.join(path, "../secrets/.env")
 load_dotenv(path2secrets)
 openai_api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 
 def speak_text(text):
@@ -35,39 +32,26 @@ def listen_user(audio_file_path):
     Records audio from the user's microphone and transcribes it using OpenAI's Whisper API.
 
     Args:
-        openai_api_key (str): The OpenAI API key for authentication.
+        audio_file_path (str): Path to the audio file to transcribe.
 
     Returns:
         str: The transcribed text from the user's speech.
     """
-    # import sounddevice as sd
-    # from scipy.io.wavfile import write
-
-    # fs = 16000  # Sample rate
-    # duration = 5  # Duration of recording in seconds
-
-    # print("🎤 Listening... Please speak now.")
-    # recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype="int16")
-    # sd.wait()  # Wait until recording is finished
-    # print("Finished recording. Transcribing...")
-
-    # # Save the recording to a temporary WAV file
-    # with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-    #     write(temp_audio_file.name, fs, recording)
-    #     temp_audio_file_path = temp_audio_file.name
-
-    # Transcribe the audio file using OpenAI's Whisper API
     try:
+        # Open the audio file
         with open(audio_file_path, "rb") as audio_file:
-            response = openai.Audio.transcribe(
-                "whisper-1", audio_file, api_key=openai_api_key
+            # Call OpenAI's Whisper API using the 'transcribe' method
+            response = client.audio.transcriptions.create(
+                model="whisper-1", file=audio_file
             )
-        transcribed_text = response["text"].strip()
+        # Extract the transcribed text from the response
+        transcribed_text = response.text.strip()
     except Exception as e:
         print(f"An error occurred during transcription: {e}")
         transcribed_text = ""
     finally:
-        # Clean up the temporary audio file
-        os.remove(audio_file_path)
+        # Clean up the temporary audio file if it exists
+        if os.path.exists(audio_file_path):
+            os.remove(audio_file_path)
 
     return transcribed_text

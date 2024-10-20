@@ -3,7 +3,7 @@ import time
 import sys
 import select
 from chatgpt_handler import NextSongsSuggester
-from spotify_api import SpotifyPlayer  # Assumed function for playing a song
+from spotify_api import SpotifyPlayer
 from voice_interaction import speak_text, listen_user
 import os
 from dotenv import load_dotenv
@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import sounddevice as sd
 import numpy as np
 import wave
-import threading
 
 # Shared variables
 recording = False
@@ -22,6 +21,43 @@ max_channels = device_info["max_input_channels"]
 dtype = "int16"
 filename = "output.wav"
 lock = threading.Lock()
+REDIRECT_URI = "http://localhost:8888/callback"
+
+# Global flag for controlling the interaction loop
+is_listening = False
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+
+# Initialize the SpotifyPlayer
+player = SpotifyPlayer(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+
+# Get available devices and select one
+devices = player.get_devices()
+if devices:
+    device_id = devices[0]["id"]  # Select the first available device
+else:
+    print("No devices available.")
+    exit()
+
+# Load environment variables
+path = os.path.dirname(os.path.abspath(__file__))
+path2secrets = os.path.join(path, "../secrets/.env")
+path2user_settings = os.path.join(path, "settings/user_settings.txt")
+load_dotenv(path2secrets)
+
+
+# Read user description from 'settings/user_settings'
+def read_user_description():
+    try:
+        with open(path2user_settings, "r", encoding="utf-8") as f:
+            user_description = f.read().strip()
+            return user_description
+    except FileNotFoundError:
+        print(f"User settings file not found at {path2user_settings}.")
+        return ""
+    except Exception as e:
+        print(f"Error reading user settings: {e}")
+        return ""
 
 
 def audio_callback(indata, frames, time, status):
@@ -34,6 +70,7 @@ def start_recording():
     """Starts recording audio."""
     global recording
     recording = True
+    player.pause(device_id=device_id)
     print("Recording started. Press Enter to stop.")
     with sd.InputStream(
         samplerate=sample_rate,
@@ -67,31 +104,6 @@ def save_audio():
             print("No audio frames recorded.")
 
 
-# Load environment variables
-path = os.path.dirname(os.path.abspath(__file__))
-path2secrets = os.path.join(path, "../secrets/.env")
-load_dotenv(path2secrets)
-
-REDIRECT_URI = "http://localhost:8888/callback"
-
-# Global flag for controlling the interaction loop
-is_listening = False
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-
-
-def timed_input(prompt, timeout=10):
-    """
-    Custom function to wait for user input with a timeout.
-    If no input is received within the timeout, returns None.
-    """
-    print(prompt, end="", flush=True)
-    inputs, _, _ = select.select([sys.stdin], [], [], timeout)
-    if inputs:
-        return sys.stdin.readline().strip()
-    return None
-
-
 def user_interaction_thread(suggester):
     """
     Handles user interactions, such as pausing the song and listening for voice prompts.
@@ -100,30 +112,23 @@ def user_interaction_thread(suggester):
     previous_songs = []
     current_song = None
 
-    # Initialize the SpotifyPlayer
-    player = SpotifyPlayer(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+    # Read user description from file and set it in the suggester
+    user_description = read_user_description()
+    suggester.user_description = user_description
 
-    # Get available devices and select one
-    devices = player.get_devices()
-    if devices:
-        device_id = devices[0]["id"]  # Select the first available device
-    else:
-        print("No devices available.")
-        exit()
-
-    # Collect user information and give a personalized greeting
+    # Collect user mood (now only asks for mood)
     suggester.collect_user_info()
+
+    # Provide a personalized greeting
     if suggester.user_description:
         speak_text(
-            f"Hey there! Based on your love for {suggester.user_description}, I'm sure we'll have a great time!"
+            f"Hey there! Based on your music taste, I see you enjoy {suggester.user_description}. Let's get started!"
         )
     else:
         speak_text("Hey there! I'm excited to build a playlist just for you!")
 
     # Add a personalized DJ introduction
-    speak_text(
-        "Okay... DJ NEA is building this playlist for you. Sit back, relax, and enjoy!"
-    )
+    speak_text("Alright, DJ NEA is crafting a playlist just for you. Enjoy!")
 
     # Get initial song recommendations
     recommendations = suggester.pipeline(prev_songs=previous_songs)
@@ -137,7 +142,7 @@ def user_interaction_thread(suggester):
 
                 # Announce and play the new song
                 speak_text(f"Got it! Now playing {current_song}. Hope you enjoy it!")
-                song_artist = [current_song.split(" - ")]
+                song_artist = current_song.split(" - ")
                 player.play_song(song_artist, device_id)
                 break
             except Exception as e:
@@ -151,17 +156,16 @@ def user_interaction_thread(suggester):
     while True:
         input("Press Enter to start recording.")
         # Start the recording in a separate thread
-        recording_thread = threading.Thread(target=start_recording)
+        recording_thread = threading.Thread(
+            target=start_recording,
+        )
         recording_thread.start()
         # Wait for user input to stop recording
         input()
         stop_recording()
         # Wait for the recording thread to finish
         recording_thread.join()
-        # Check for user input with a 10-second timeout
-        # user_input = timed_input(
-        #     "Press 'space' for a request or type 'quit' to exit", timeout=10.0
-        # )
+        # Use Whisper for voice input processing
         user_input = listen_user(filename)
         if user_input:
             is_listening = True
@@ -190,7 +194,7 @@ def user_interaction_thread(suggester):
                         speak_text(
                             f"Got it! Now playing {current_song}. Hope you enjoy it!"
                         )
-                        song_artist = [current_song.split(" - ")]
+                        song_artist = current_song.split(" - ")
                         player.play_song(song_artist, device_id)
                         break
                     except Exception as e:

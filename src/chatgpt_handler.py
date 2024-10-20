@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 
 class SuggestedSong(BaseModel):
     song_name: str = Field(..., title="Song Name", description="The name of the song.")
-    artist: Optional[str] = Field(None, title="Artist", description="The artist of the song.")
+    artist: Optional[str] = Field(
+        None, title="Artist", description="The artist of the song."
+    )
 
 
 class NextSongsSuggester:
@@ -44,30 +46,21 @@ class NextSongsSuggester:
             max_tokens=100,
         )
         self.user_description: str = ""
-        self.activity: str = ""
+        self.mood: str = ""
         self.n_recommendations = n_recommendations
         self.past_played_songs_num = past_played_songs_num
 
     def collect_user_info(self) -> None:
         """
-        Initiates a conversation with the user to collect information about their music taste
-        and current activity. This information will be used to tailor song recommendations.
+        Collects information about the user's current mood.
         """
         print("🎧 Hello! I'm your AI DJ. Let's get started.")
 
-        # Ask the user for a description of their music taste
-        user_input = input(
-            "Tell me a bit about your music taste or favorite genres (or press Enter to skip): "
-        )
-        self.user_description = user_input.strip()
+        # Ask the user about their current mood
+        user_input = input("How are you feeling today? (e.g., happy, sad, energetic): ")
+        self.mood = user_input.strip().lower()
 
-        # Ask the user about their current activity
-        user_input = input(
-            "What activity are you doing or plan to do while listening to music? (or press Enter to skip): "
-        )
-        self.activity = user_input.strip()
-
-        print("Great! I'll tailor your music experience based on your input. 🎶")
+        print("Great! I'll tailor your music experience based on your mood. 🎶")
 
     def infer_mood(self, user_input: str) -> str:
         """
@@ -85,7 +78,11 @@ class NextSongsSuggester:
             "If the mood is not clear, respond with 'neutral'.\n\n"
             f"User input: '{user_input}'\n\nMood:"
         )
-        response = self.mood_model.invoke([SystemMessage(content=prompt)]).content.strip().lower()
+        response = (
+            self.mood_model.invoke([SystemMessage(content=prompt)])
+            .content.strip()
+            .lower()
+        )
 
         # Ensure the response is a single word and sanitize if necessary
         mood = response.split()[0] if response else "neutral"
@@ -97,8 +94,7 @@ class NextSongsSuggester:
         prev_songs: Optional[List[str]] = None,
     ) -> str:
         """
-        Builds the prompt to be sent to the ChatGPT model based on the collected user information,
-        inferred mood, previous songs, and any new input from the user.
+        Builds the prompt to be sent to the ChatGPT model based on collected user information.
 
         Args:
             input_from_user (str): Additional input from the user during the session.
@@ -107,33 +103,31 @@ class NextSongsSuggester:
         Returns:
             str: The constructed prompt for the AI model.
         """
-        mood = self.infer_mood(input_from_user)
-
         context = (
             "You are an AI DJ, the most advanced in the world. Your task is to suggest songs for the user to listen to next, "
-            "based on their music taste, inferred mood, activity, and previous songs."
+            "based on their music taste, mood, activity, and previous songs."
         )
 
         if self.user_description:
-            context += (
-                f"\n\nHere is a description of the user's music taste:\n{self.user_description}"
-            )
+            context += f"\n\nHere is a description of the user's music taste:\n{self.user_description}"
 
-        context += f"\n\nThe user's current mood is inferred to be: {mood}"
-
-        if self.activity:
-            context += f"\n\nThe user is currently doing or plans to do the following activity: {self.activity}"
+        if self.mood:
+            context += f"\n\nThe user's current mood is: {self.mood}"
 
         if prev_songs:
             context += "\n\nHere are the last few songs that the user has been listening to in this playlist:"
-            recent_songs = prev_songs[-self.past_played_songs_num:]
+            recent_songs = prev_songs[-self.past_played_songs_num :]
             for song in recent_songs:
                 context += f"\n- {song}"
         else:
-            context += "\n\nThe user has not listened to any songs yet in this playlist."
+            context += (
+                "\n\nThe user has not listened to any songs yet in this playlist."
+            )
 
         if input_from_user:
-            context += f"\n\nThe user has provided the following input: '{input_from_user}'"
+            context += (
+                f"\n\nThe user has provided the following input: '{input_from_user}'"
+            )
 
         context += f"\n\nBased on this information, suggest the next {self.n_recommendations} songs for the user."
 
@@ -142,7 +136,7 @@ class NextSongsSuggester:
             "\n- Only provide the song titles and artist names, in a comma-separated list like this: "
             "'Song Title - Artist, Song Title - Artist, ...'"
         )
-        context += "\n- Ensure that the recommendations match the user's inferred mood, activity, and music taste."
+        context += "\n- Ensure that the recommendations match the user's mood, activity, and music taste."
         context += "\n- Do not include any songs that the user has already listened to in this playlist."
         context += "\n- Make sure that the songs exist and are spelled correctly."
 

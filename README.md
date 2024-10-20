@@ -6,5 +6,3 @@
 # Structure
 
 ### Pipeline
-
-- Prompt building

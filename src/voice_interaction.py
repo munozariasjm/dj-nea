@@ -1,30 +1,26 @@
-# voice_interaction.py
-
 import openai
 import pyttsx3
 import tempfile
 import os
 import threading
 
+from gtts import gTTS
+import os
+import tempfile
+import playsound
+
 
 def speak_text(text):
     """
-    Converts text to speech and plays it aloud.
-
-    Args:
-        text (str): The text to be spoken.
+    Uses Google Text-to-Speech (gTTS) for more natural-sounding TTS.
     """
-    engine = pyttsx3.init()
-    # Optionally, set properties like voice, rate, and volume
-    engine.setProperty("rate", 150)  # Adjust the speech rate
-    engine.setProperty("volume", 1.0)  # Set volume between 0 and 1
-
-    # Run the text-to-speech conversion in a separate thread to prevent blocking
-    def run_speech():
-        engine.say(text)
-        engine.runAndWait()
-
-    threading.Thread(target=run_speech).start()
+    try:
+        tts = gTTS(text, lang="en")
+        with tempfile.NamedTemporaryFile(delete=True, suffix=".mp3") as temp_audio_file:
+            tts.save(temp_audio_file.name)
+            playsound.playsound(temp_audio_file.name)
+    except Exception as e:
+        print(f"Error using gTTS: {e}")
 
 
 def listen_user(openai_api_key):

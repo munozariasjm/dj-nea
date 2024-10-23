@@ -1,7 +1,3 @@
-Here's the refined and more professional version of the `README.md` file without emojis:
-
----
-
 # DJ NEA - The AI DJ Experience
 
 Welcome to **DJ NEA**, an interactive AI-based music recommendation system that dynamically curates Spotify playlists based on your mood, activities, and preferences. Developed during a high-intensity hackathon, this project leverages OpenAI's GPT models and Whisper for a conversational AI DJ experience, combined with Spotify's API for real-time music playback.
